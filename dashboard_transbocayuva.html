@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Média de Consumo | Transbocayuva</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f4f3f0; --surface: #ffffff; --surface2: #f8f7f5;
+    --border: rgba(11,11,11,0.10); --border-strong: rgba(11,11,11,0.18);
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #898781;
+    --accent: #185FA5; --accent-bg: #E6F1FB;
+    --success: #0f6e56; --success-bg: #e1f5ee;
+    --warning: #854F0B; --warning-bg: #faeeda;
+    --danger: #a32d2d; --danger-bg: #fcebeb;
+    --radius: 8px;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; }
+  header { background: #1a2b4a; color: #fff; padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-size: 18px; font-weight: 500; }
+  .logo span { color: #7eb3e8; }
+  .header-sub { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+  .metas-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .meta-chip { font-size: 12px; padding: 5px 12px; border-radius: var(--radius); border: 0.5px solid var(--border-strong); color: var(--text-secondary); background: var(--surface); }
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+  @media (max-width: 600px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+  .kpi { background: var(--surface); border-radius: 12px; padding: 1rem 1.25rem; border: 0.5px solid var(--border); }
+  .kpi-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+  .kpi-value { font-size: 24px; font-weight: 500; }
+  .kpi-sub { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
+  .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1rem; }
+  .filter-btn { font-size: 12px; padding: 5px 14px; border-radius: var(--radius); border: 0.5px solid var(--border-strong); background: var(--surface); color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+  .filter-btn:hover { background: var(--surface2); }
+  .filter-btn.active { background: var(--accent-bg); color: var(--accent); border-color: var(--accent); font-weight: 500; }
+  .card { background: var(--surface); border-radius: 12px; border: 0.5px solid var(--border); padding: 1.25rem; margin-bottom: 1rem; }
+  .legend-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 12px; font-size: 12px; color: var(--text-secondary); align-items: center; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 4px; vertical-align: middle; }
+  .section-title { font-size: 14px; font-weight: 500; color: var(--text-secondary); margin: 1.5rem 0 0.5rem; }
+  .hint { font-size: 12px; color: var(--text-muted); margin-bottom: 0.75rem; }
+  .table-wrap { overflow-x: auto; background: var(--surface); border-radius: 12px; border: 0.5px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 700px; }
+  th { text-align: left; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text-muted); border-bottom: 0.5px solid var(--border); white-space: nowrap; background: var(--surface2); }
+  td { padding: 10px 14px; color: var(--text-primary); border-bottom: 0.5px solid var(--border); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover td { background: var(--surface2); }
+  tr.selected td { background: var(--accent-bg); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; }
+  .badge-ok { background: var(--success-bg); color: var(--success); }
+  .badge-warn { background: var(--warning-bg); color: var(--warning); }
+  .badge-bad { background: var(--danger-bg); color: var(--danger); }
+  .badge-cm { background: #E6F1FB; color: #185FA5; border-radius: 4px; }
+  .badge-truck { background: #FAEEDA; color: #854F0B; border-radius: 4px; }
+  .badge-toco { background: #EAF3DE; color: #3B6D11; border-radius: 4px; }
+  .painel { background: var(--surface); border-radius: 12px; border: 1.5px solid var(--accent); padding: 1.25rem; margin-bottom: 1rem; display: none; }
+  .painel.visivel { display: block; }
+  .painel-header { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; }
+  .avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--accent-bg); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 15px; color: var(--accent); flex-shrink: 0; }
+  .painel-nome { font-size: 15px; font-weight: 500; }
+  .painel-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .fechar-btn { margin-left: auto; font-size: 12px; padding: 5px 12px; border-radius: var(--radius); border: 0.5px solid var(--border-strong); background: transparent; color: var(--text-secondary); cursor: pointer; }
+  .fechar-btn:hover { background: var(--surface2); }
+  .painel-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 1rem; }
+  @media (max-width: 500px) { .painel-stats { grid-template-columns: repeat(2,1fr); } }
+  .stat { background: var(--surface2); border-radius: var(--radius); padding: 10px 12px; border: 0.5px solid var(--border); }
+  .stat-label { font-size: 11px; color: var(--text-muted); }
+  .stat-value { font-size: 17px; font-weight: 500; margin-top: 3px; }
+  .upload-section { background: var(--surface); border-radius: 12px; border: 1.5px dashed var(--border-strong); padding: 2rem; text-align: center; margin-top: 2rem; cursor: pointer; transition: background 0.15s; }
+  .upload-section:hover { background: var(--surface2); }
+  .upload-icon { font-size: 32px; margin-bottom: 8px; }
+  .upload-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .upload-sub { font-size: 13px; color: var(--text-muted); }
+  footer { text-align: center; font-size: 12px; color: var(--text-muted); padding: 2rem 1rem 1rem; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">Transbocayuva <span>/ Média de Consumo</span></div>
+    <div class="header-sub">Controle de acertos de viagem</div>
+  </div>
+  <div style="font-size:12px;color:rgba(255,255,255,0.5)" id="header-data"></div>
+</header>
+<main>
+  <div class="metas-row">
+    <span class="meta-chip"><strong style="color:#185FA5">Cavalo mecânico</strong> — meta 3,0 km/l</span>
+    <span class="meta-chip"><strong style="color:#854F0B">Truck</strong> — meta 4,0 km/l</span>
+    <span class="meta-chip"><strong style="color:#3B6D11">Toco</strong> — meta 5,0 km/l</span>
+  </div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Viagens analisadas</div><div class="kpi-value" id="kpi-total">—</div><div class="kpi-sub">Maio/2026</div></div>
+    <div class="kpi"><div class="kpi-label">Dentro da meta</div><div class="kpi-value" id="kpi-ok" style="color:var(--success)">—</div><div class="kpi-sub" id="kpi-ok-sub">—</div></div>
+    <div class="kpi"><div class="kpi-label">Abaixo da meta</div><div class="kpi-value" id="kpi-bad" style="color:var(--danger)">—</div><div class="kpi-sub" id="kpi-bad-sub">—</div></div>
+    <div class="kpi"><div class="kpi-label">Média geral</div><div class="kpi-value" id="kpi-media">—</div><div class="kpi-sub">todas as viagens</div></div>
+  </div>
+  <div class="filter-row">
+    <button class="filter-btn active" onclick="filtrar('todos',this)">Todos</button>
+    <button class="filter-btn" onclick="filtrar('CAVALO MECÂNICO',this)">Cavalos mecânicos</button>
+    <button class="filter-btn" onclick="filtrar('TRUCK',this)">Trucks</button>
+    <button class="filter-btn" onclick="filtrar('TOCO',this)">Tocos</button>
+    <button class="filter-btn" onclick="filtrar('abaixo',this)">Abaixo da meta</button>
+  </div>
+  <div class="card">
+    <div class="legend-row">
+      <span><span class="legend-dot" style="background:#1baf7a"></span>Acima da meta</span>
+      <span><span class="legend-dot" style="background:#eda100"></span>Próximo (−10%)</span>
+      <span><span class="legend-dot" style="background:#e34948"></span>Abaixo da meta</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--text-muted)">linha tracejada = meta do tipo</span>
+    </div>
+    <div style="position:relative;height:260px"><canvas id="barChart" role="img" aria-label="Gráfico de médias por viagem"></canvas></div>
+  </div>
+  <div class="painel" id="painel">
+    <div class="painel-header">
+      <div class="avatar" id="p-avatar"></div>
+      <div><div class="painel-nome" id="p-nome"></div><div class="painel-sub" id="p-sub"></div></div>
+      <button class="fechar-btn" onclick="fecharPainel()">✕ Fechar</button>
+    </div>
+    <div class="painel-stats" id="p-stats"></div>
+    <div class="legend-row" style="margin-bottom:8px">
+      <span><span class="legend-dot" style="background:#2a78d6;border-radius:50%"></span>Média atual</span>
+      <span><span style="display:inline-block;width:20px;height:0;border-top:2px dashed #85B7EB;vertical-align:middle;margin-right:4px"></span>Média anterior</span>
+      <span><span style="display:inline-block;width:20px;height:0;border-top:2px dashed #e34948;vertical-align:middle;margin-right:4px"></span>Meta</span>
+    </div>
+    <div style="position:relative;height:220px"><canvas id="lineChart" role="img" aria-label="Evolução de média do motorista"></canvas></div>
+  </div>
+  <p class="section-title">Detalhamento por viagem</p>
+  <p class="hint">👆 Clique em uma linha para ver a evolução do motorista</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>Viagem</th><th>Motorista</th><th>Placa</th><th>Tipo</th>
+        <th>Meta</th><th>Período</th><th>Km rod.</th><th>Litros</th>
+        <th>Média (km/l)</th><th>vs Meta</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+  <div class="upload-section" id="upload-area" onclick="document.getElementById('file-input').click()">
+    <div class="upload-icon">📂</div>
+    <div class="upload-title">Carregar novo relatório</div>
+    <div class="upload-sub">Arraste o PDF de acertos do TMS aqui ou clique para selecionar<br>
+    <small style="display:block;margin-top:4px">Após o upload, cole o arquivo no chat com Claude para atualizar os dados</small></div>
+    <input type="file" id="file-input" accept=".pdf" style="display:none" onchange="handleFile(this)">
+  </div>
+</main>
+<footer>Dashboard de Média de Consumo · Transbocayuva Transportes Ltda</footer>
+
+<script>
+const grupos = {
+  'PPH8C42':'CAVALO MECÂNICO','SGI2I17':'CAVALO MECÂNICO','SGI2I20':'CAVALO MECÂNICO','SGI4B86':'CAVALO MECÂNICO',
+  'SGI2I26':'CAVALO MECÂNICO','SGI4B91':'CAVALO MECÂNICO','MTP1C01':'CAVALO MECÂNICO','MRJ7D68':'CAVALO MECÂNICO',
+  'SFP4E65':'CAVALO MECÂNICO','SFR1A52':'CAVALO MECÂNICO','KET7G22':'CAVALO MECÂNICO','BXG2J21':'CAVALO MECÂNICO',
+  'MTC4J15':'CAVALO MECÂNICO','KAD1A42':'CAVALO MECÂNICO','MPI4C53':'CAVALO MECÂNICO','MTZ7C04':'CAVALO MECÂNICO',
+  'OQV1A11':'CAVALO MECÂNICO','EVO8E39':'CAVALO MECÂNICO','QRF6C62':'CAVALO MECÂNICO','GNK6E27':'CAVALO MECÂNICO',
+  'KCJ6J39':'CAVALO MECÂNICO','LUB2I98':'CAVALO MECÂNICO','APP9J06':'CAVALO MECÂNICO','LMT7J13':'CAVALO MECÂNICO',
+  'OVI1J31':'CAVALO MECÂNICO','SEK2F44':'CAVALO MECÂNICO','SEK2F38':'CAVALO MECÂNICO','SEK2F48':'CAVALO MECÂNICO',
+  'OLE9B80':'CAVALO MECÂNICO','SEK2F42':'CAVALO MECÂNICO','QRL8D40':'CAVALO MECÂNICO','NWM2G94':'CAVALO MECÂNICO',
+  'LUL7I53':'CAVALO MECÂNICO','LUN8B55':'CAVALO MECÂNICO','MRJ7D67':'CAVALO MECÂNICO','MTT9A71':'CAVALO MECÂNICO',
+  'PEY2A57':'TOCO','ETP7C71':'TOCO','EMU0D45':'TOCO','HFB4C77':'TOCO','FNT8B68':'TOCO','FNT8C20':'TOCO','FNT8B44':'TOCO',
+  'PPC0B72':'TRUCK','FKH9D56':'TRUCK','PPC0B73':'TRUCK','FGE1I82':'TRUCK','QRL9I65':'TRUCK','FVW5I84':'TRUCK',
+  'FCU1F64':'TRUCK','MTY1694':'TRUCK','FWI1F95':'TRUCK','MSG9178':'TRUCK','SGG6I62':'TRUCK','JOB2J79':'TRUCK',
+  'OYD4H07':'TRUCK','QRG8B81':'TRUCK','PPQ7I51':'TRUCK','OYE8B82':'TRUCK','RBE1E87':'TRUCK','SGC1C49':'TRUCK',
+  'PPB3B60':'TRUCK','QRI4E32':'TRUCK','OOK0C87':'TRUCK','AXG8D02':'TRUCK','EJX7E89':'TRUCK','QRL6F57':'TRUCK',
+  'PPN4E87':'TRUCK','NPR2051':'TRUCK','ONQ6A18':'TRUCK'
+};
+const metas = {'CAVALO MECÂNICO':3.0,'TOCO':5.0,'TRUCK':4.0};
+const limpa = p => p.replace(/[-\s]/g,'').toUpperCase();
+
+let todasViagens = [
+  {num:5181,motorista:'Rene da Silva Souza',placa:'FGE1I82',inicio:'28/04',fim:'02/05',km:2219,litros:560.018,mediaAnt:3.869,media:3.962},
+  {num:5195,motorista:'Warley Flegler Gusmao',placa:'SGI4B86',inicio:'29/04',fim:'05/05',km:2399,litros:1143.0,mediaAnt:1.958,media:2.099},
+  {num:5199,motorista:'Fernando Sipriano de Souza',placa:'MTC4J15',inicio:'29/04',fim:'02/05',km:2123,litros:777.004,mediaAnt:2.623,media:2.732},
+  {num:5201,motorista:'Roberto dos Santos Peres',placa:'OLE9B80',inicio:'28/04',fim:'04/05',km:1887,litros:565.0,mediaAnt:1.598,media:3.340},
+  {num:5204,motorista:'Wanderson Lessa do Rosario',placa:'QRG8B81',inicio:'29/04',fim:'06/05',km:2862,litros:988.440,mediaAnt:2.765,media:2.895},
+  {num:5205,motorista:'Jair Sten Amorim',placa:'SGI4B91',inicio:'29/04',fim:'07/05',km:2645,litros:785.0,mediaAnt:2.718,media:3.369},
+  {num:5208,motorista:'Cristian Fileno dos Santos',placa:'OYE8B82',inicio:'03/05',fim:'06/05',km:1443,litros:566.0,mediaAnt:2.913,media:2.549},
+  {num:5212,motorista:'Welton Barbosa Santos',placa:'MRJ7D68',inicio:'29/04',fim:'08/05',km:2398,litros:1051.004,mediaAnt:2.866,media:2.282},
+  {num:5213,motorista:'Rafael de Oliveira Dias',placa:'FVW5I84',inicio:'03/05',fim:'07/05',km:2648,litros:768.0,mediaAnt:3.370,media:3.448},
+  {num:5216,motorista:'Sidney Jose Monteiro Pereira',placa:'LUB2I98',inicio:'03/05',fim:'09/05',km:2545,litros:843.0,mediaAnt:3.042,media:3.019},
+  {num:5223,motorista:'Pedro Henrique Bautz Velten',placa:'SEK2F48',inicio:'01/05',fim:'11/05',km:3364,litros:1401.001,mediaAnt:2.324,media:2.401},
+  {num:5224,motorista:'Josimar dos Santos',placa:'QRF6C62',inicio:'29/04',fim:'03/05',km:2154,litros:729.0,mediaAnt:2.751,media:2.955},
+  {num:5230,motorista:'Guilherme Silva Barbosa',placa:'FKH9D56',inicio:'02/05',fim:'13/05',km:2430,litros:848.0,mediaAnt:3.149,media:2.866},
+  {num:5238,motorista:'Douglas do Carmo Santana',placa:'PPC0B73',inicio:'02/05',fim:'08/05',km:2129,litros:613.020,mediaAnt:4.022,media:3.473},
+];
+todasViagens.forEach(v=>{v.tipo=grupos[limpa(v.placa)]||'DESCONHECIDO';v.meta=metas[v.tipo]||3.0;v.delta=v.media-v.meta;v.pct=(v.delta/v.meta)*100;});
+
+document.getElementById('header-data').textContent='Atualizado em '+new Date().toLocaleDateString('pt-BR');
+
+let filtradas=[...todasViagens],barInst=null,lineInst=null,motoristaSel=null;
+const cor=v=>v.media>=v.meta?'#1baf7a':v.media>=v.meta*0.9?'#eda100':'#e34948';
+const iniciais=n=>n.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase();
+
+function renderKPIs(d){
+  const ok=d.filter(v=>v.media>=v.meta).length,bad=d.length-ok,med=d.reduce((s,v)=>s+v.media,0)/d.length;
+  document.getElementById('kpi-total').textContent=d.length;
+  document.getElementById('kpi-ok').textContent=ok;
+  document.getElementById('kpi-ok-sub').textContent=((ok/d.length)*100).toFixed(0)+'% das viagens';
+  document.getElementById('kpi-bad').textContent=bad;
+  document.getElementById('kpi-bad-sub').textContent=((bad/d.length)*100).toFixed(0)+'% das viagens';
+  document.getElementById('kpi-media').textContent=med.toFixed(3)+' km/l';
+}
+
+function renderTabela(d){
+  const tb=document.getElementById('tbody');tb.innerHTML='';
+  d.forEach(v=>{
+    const bc=v.media>=v.meta?'badge-ok':v.media>=v.meta*0.9?'badge-warn':'badge-bad';
+    const tc=v.tipo==='TRUCK'?'badge-truck':v.tipo==='TOCO'?'badge-toco':'badge-cm';
+    const tl=v.tipo==='CAVALO MECÂNICO'?'Cavalo':v.tipo==='TOCO'?'Toco':'Truck';
+    const seta=v.delta>=0?'▲':'▼',c2=v.delta>=0?'var(--success)':'var(--danger)';
+    const sel=motoristaSel===v.motorista?'selected':'';
+    tb.innerHTML+=`<tr class="clickable ${sel}" onclick="selecionarMotorista('${v.motorista}')">
+      <td><strong>#${v.num}</strong></td>
+      <td>${v.motorista.split(' ').slice(0,2).join(' ')}</td>
+      <td style="font-family:monospace;font-size:11px">${v.placa}</td>
+      <td><span class="badge ${tc}">${tl}</span></td>
+      <td style="color:var(--text-secondary)">${v.meta.toFixed(1)}</td>
+      <td style="color:var(--text-muted)">${v.inicio}→${v.fim}/05</td>
+      <td>${v.km.toLocaleString('pt-BR')} km</td>
+      <td>${v.litros.toFixed(0)} L</td>
+      <td><span class="badge ${bc}">${v.media.toFixed(3)}</span></td>
+      <td style="color:${c2};font-size:12px">${seta} ${Math.abs(v.pct).toFixed(1)}%</td>
+    </tr>`;
+  });
+}
+
+function renderBarChart(d){
+  if(barInst)barInst.destroy();
+  barInst=new Chart(document.getElementById('barChart'),{type:'bar',data:{labels:d.map(v=>'#'+v.num),datasets:[
+    {label:'Média km/l',data:d.map(v=>v.media),backgroundColor:d.map(cor),borderRadius:4,borderSkipped:'bottom',order:2},
+    {label:'Meta',data:d.map(v=>v.meta),type:'line',borderColor:'#2a78d6',borderWidth:1.5,borderDash:[4,3],pointRadius:0,fill:false,order:1}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{
+    title:i=>{const v=d[i[0].dataIndex];return v.motorista+' — '+v.placa;},
+    label:i=>{if(i.datasetIndex===0){const v=d[i.dataIndex];return ` ${v.media.toFixed(3)} km/l | meta ${v.meta.toFixed(1)} | ${v.pct>=0?'+':''}${v.pct.toFixed(1)}%`;}return null;}
+  }}},scales:{x:{ticks:{color:'#898781',font:{size:11},autoSkip:false},grid:{display:false}},y:{ticks:{color:'#898781',font:{size:11},callback:v=>v.toFixed(1)},grid:{color:'#e1e0d9'},min:1.5}}}});
+}
+
+function selecionarMotorista(nome){
+  motoristaSel=nome;
+  const vs=todasViagens.filter(v=>v.motorista===nome).sort((a,b)=>a.num-b.num);
+  const meta=vs[0].meta,tipo=vs[0].tipo;
+  const tl=tipo==='CAVALO MECÂNICO'?'Cavalo mecânico':tipo==='TOCO'?'Toco':'Truck';
+  const medias=vs.map(v=>v.media);
+  const melhor=Math.max(...medias),mediaM=medias.reduce((s,x)=>s+x,0)/medias.length;
+  const tend=medias.length>1?medias[medias.length-1]-medias[0]:0;
+  const cT=tend>=0?'var(--success)':'var(--danger)';
+  document.getElementById('p-avatar').textContent=iniciais(nome);
+  document.getElementById('p-nome').textContent=nome;
+  document.getElementById('p-sub').textContent=tl+' · '+vs[0].placa+' · Meta: '+meta.toFixed(1)+' km/l';
+  document.getElementById('p-stats').innerHTML=`
+    <div class="stat"><div class="stat-label">Viagens</div><div class="stat-value">${vs.length}</div></div>
+    <div class="stat"><div class="stat-label">Média do período</div><div class="stat-value">${mediaM.toFixed(3)}</div></div>
+    <div class="stat"><div class="stat-label">Melhor viagem</div><div class="stat-value" style="color:var(--success)">${melhor.toFixed(3)}</div></div>
+    <div class="stat"><div class="stat-label">Tendência</div><div class="stat-value" style="color:${cT}">${tend>=0?'▲':'▼'} ${Math.abs(tend).toFixed(3)}</div></div>`;
+  const painel=document.getElementById('painel');
+  painel.classList.add('visivel');
+  painel.scrollIntoView({behavior:'smooth',block:'nearest'});
+  if(lineInst)lineInst.destroy();
+  lineInst=new Chart(document.getElementById('lineChart'),{type:'line',data:{
+    labels:vs.map(v=>'#'+v.num+' ('+v.inicio+')'),
+    datasets:[
+      {label:'Média atual',data:medias,borderColor:'#2a78d6',backgroundColor:'rgba(42,120,214,0.08)',borderWidth:2,
+       pointRadius:7,pointBackgroundColor:medias.map(m=>m>=meta?'#1baf7a':m>=meta*0.9?'#eda100':'#e34948'),
+       pointBorderColor:'#fff',pointBorderWidth:2,fill:true,tension:0.35,order:1},
+      {label:'Média anterior',data:vs.map(v=>v.mediaAnt),borderColor:'#85B7EB',backgroundColor:'transparent',
+       borderWidth:1.5,borderDash:[3,3],pointRadius:4,pointBackgroundColor:'#85B7EB',fill:false,tension:0.35,order:2},
+      {label:'Meta',data:vs.map(()=>meta),borderColor:'#e34948',borderWidth:1.5,borderDash:[6,3],pointRadius:0,fill:false,order:3}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{
+      title:i=>nome+' — Viagem #'+vs[i[0].dataIndex].num,
+      label:i=>{if(i.datasetIndex===0)return ` Média atual: ${i.raw.toFixed(3)} km/l`;if(i.datasetIndex===1)return ` Média anterior: ${i.raw.toFixed(3)} km/l`;return ` Meta: ${i.raw.toFixed(1)} km/l`;}
+    }}},scales:{x:{ticks:{color:'#898781',font:{size:11}},grid:{display:false}},
+      y:{ticks:{color:'#898781',font:{size:11},callback:v=>v.toFixed(1)},grid:{color:'#e1e0d9'},min:Math.max(0,Math.min(...medias,meta)-0.5)}}}});
+  renderTabela(filtradas);
+}
+
+function fecharPainel(){
+  motoristaSel=null;
+  document.getElementById('painel').classList.remove('visivel');
+  if(lineInst){lineInst.destroy();lineInst=null;}
+  renderTabela(filtradas);
+}
+
+function filtrar(tipo,btn){
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(tipo==='todos')filtradas=[...todasViagens];
+  else if(tipo==='abaixo')filtradas=todasViagens.filter(v=>v.media<v.meta);
+  else filtradas=todasViagens.filter(v=>v.tipo===tipo);
+  fecharPainel();renderKPIs(filtradas);renderTabela(filtradas);renderBarChart(filtradas);
+}
+
+function handleFile(input){
+  const f=input.files[0];if(!f)return;
+  document.getElementById('upload-area').innerHTML=`<div class="upload-icon">✅</div><div class="upload-title">${f.name} recebido!</div><div class="upload-sub">Cole o PDF no chat com Claude para processar e atualizar os dados.</div>`;
+}
+const drop=document.getElementById('upload-area');
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.style.background='#eef4fb';});
+drop.addEventListener('dragleave',()=>{drop.style.background='';});
+drop.addEventListener('drop',e=>{e.preventDefault();drop.style.background='';
+  drop.innerHTML='<div class="upload-icon">✅</div><div class="upload-title">Arquivo recebido!</div><div class="upload-sub">Cole o PDF no chat com Claude para atualizar os dados.</div>';});
+
+renderKPIs(todasViagens);renderTabela(todasViagens);renderBarChart(todasViagens);
+</script>
+</body>
+</html>
